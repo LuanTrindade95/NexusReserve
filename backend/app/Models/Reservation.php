@@ -16,6 +16,7 @@ class Reservation extends Model implements Auditable
 {
     /** @use HasFactory<ReservationFactory> */
     use HasFactory;
+
     use HasStates;
     use \OwenIt\Auditing\Auditable;
     use SoftDeletes;

@@ -38,7 +38,5 @@ abstract class ReservationTransition extends Transition
         return $this->reservation->refresh();
     }
 
-    protected function applyStateMetadata(): void
-    {
-    }
+    protected function applyStateMetadata(): void {}
 }

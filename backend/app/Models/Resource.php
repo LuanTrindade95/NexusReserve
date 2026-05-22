@@ -14,6 +14,7 @@ class Resource extends Model implements Auditable
 {
     /** @use HasFactory<ResourceFactory> */
     use HasFactory;
+
     use \OwenIt\Auditing\Auditable;
     use SoftDeletes;
 
