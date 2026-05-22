@@ -2,8 +2,8 @@
 
 | Fase | Status | Evidência |
 |---|---|---|
-| Fase 01 — Visão e documentação base | ⏳ pendente | — |
-| Fase 02 — Fundação da arquitetura e infraestrutura | ⏳ pendente | — |
+| Fase 01 — Visão e documentação base | ✓ concluída | 3f9705a |
+| Fase 02 — Fundação da arquitetura e infraestrutura | ✓ concluída | f35e65a |
 | Fase 03 — Autenticação e RBAC | ⏳ pendente | — |
 | Fase 04 — Domínio de recursos e tipos | ⏳ pendente | — |
 | Fase 05 — Ciclo de reservas e conflitos | ⏳ pendente | — |
