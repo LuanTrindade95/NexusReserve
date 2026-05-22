@@ -1,0 +1,85 @@
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: nexus_reserve
+      MYSQL_USER: nexus_reserve
+      MYSQL_PASSWORD: nexus_reserve
+      MYSQL_ROOT_PASSWORD: nexus_reserve_root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-unexus_reserve", "-pnexus_reserve"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    env_file:
+      - backend/.env.example
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    env_file:
+      - backend/.env.example
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  horizon:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    env_file:
+      - backend/.env.example
+    command: ["php", "artisan", "horizon"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    ports:
+      - "4200:4200"
+    depends_on:
+      backend:
+        condition: service_started
+
+volumes:
+  mysql_data:
