@@ -56,3 +56,14 @@ Usar Laravel Sanctum com tokens Bearer emitidos por `/api/v1/auth/login`, proteg
 
 ### Consequências
 O frontend recebe um contrato estável para login, sessão atual e tratamento de falhas. A autorização permanece declarativa por middleware/policies e aproveita as permissões seedadas. Tokens Bearer simplificam o MVP, mas exigem cuidado no armazenamento client-side e podem evoluir para fluxo cookie-based se a estratégia de segurança do SPA mudar.
+
+## ADR-06 — Controller fino com Service, DTO e API Resource
+
+### Contexto
+Os CRUDs de tipos de recurso e recursos são a primeira superfície administrativa da API. Eles precisam validar entrada, aplicar RBAC, compor filtros e expor contratos estáveis sem transformar controllers em pontos de regra de negócio.
+
+### Decisão
+Adotar o fluxo `Controller -> Service -> Model`, usando Form Requests para validação/autorização de entrada, `spatie/laravel-data` como DTO entre controller e service, e API Resources para serialização de saída. Escritas ficam protegidas por `resources.manage`; leitura exige autenticação; auditoria de recurso exige `audit.view`.
+
+### Consequências
+Controllers ficam finos e previsíveis, services concentram regras de persistência/filtros e o contrato JSON permanece separado dos models. A abordagem adiciona alguns arquivos por recurso, mas mantém a API preparada para regras futuras sem antecipar a lógica de reservas/conflitos.
