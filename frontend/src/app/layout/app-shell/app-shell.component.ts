@@ -5,7 +5,7 @@ import { AuthService } from '@app/core/auth/auth.service';
 import { LoadingService } from '@app/core/loading/loading.service';
 import { ToastService } from '@app/core/toast/toast.service';
 import { ButtonComponent } from '@app/shared/ui/button/button.component';
-import { CalendarDays, Gauge, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, ShieldCheck } from 'lucide-angular';
+import { CalendarDays, Gauge, LogOut, Menu, PackageSearch, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-angular';
 import { LucideAngularModule } from 'lucide-angular';
 
 interface NavigationItem {
@@ -131,10 +131,10 @@ export class AppShellComponent {
   readonly logoutIcon = LogOut;
 
   readonly navigation: readonly NavigationItem[] = [
-    { label: 'Dashboard', path: '/', icon: Gauge },
-    { label: 'Calendar', path: '/', icon: CalendarDays },
-    { label: 'Administration', path: '/', icon: Settings, permission: 'resources.manage' },
-    { label: 'Audit', path: '/', icon: ShieldCheck, permission: 'audit.view' },
+    { label: 'Dashboard', path: '/dashboard', icon: Gauge },
+    { label: 'Resources', path: '/resources', icon: PackageSearch },
+    { label: 'Reservations', path: '/reservations', icon: CalendarDays },
+    { label: 'Resource types', path: '/admin/resource-types', icon: Settings, permission: 'resources.manage' },
   ];
 
   readonly visibleNavigation = computed(() => this.navigation.filter((item) => {
