@@ -67,3 +67,14 @@ Adotar o fluxo `Controller -> Service -> Model`, usando Form Requests para valid
 
 ### Consequências
 Controllers ficam finos e previsíveis, services concentram regras de persistência/filtros e o contrato JSON permanece separado dos models. A abordagem adiciona alguns arquivos por recurso, mas mantém a API preparada para regras futuras sem antecipar a lógica de reservas/conflitos.
+
+## ADR-07 — Conflito de reservas com lock transacional no recurso
+
+### Contexto
+A disponibilidade de um recurso é o ponto crítico do domínio: duas reservas bloqueantes não podem ocupar a mesma janela e reservas não podem sobrepor janelas de bloqueio. MySQL não oferece exclusion constraint nativa para intervalos, então a consistência depende da aplicação.
+
+### Decisão
+Aplicar a checagem de disponibilidade no `ReservationService` durante as transições que bloqueiam agenda (`draft -> pending` e `pending -> approved`). A operação roda em transação, bloqueia a linha do recurso com `lockForUpdate`, consulta reservas em `pending`, `approved` e `checked_out` usando intervalo semiaberto `[starts_at, ends_at)`, e também consulta `resource_blackouts`. Conflitos retornam `409` com `code: reservation.conflict`.
+
+### Consequências
+O backend permanece fonte de verdade para disponibilidade e reduz corrida entre submissões concorrentes do mesmo recurso. Drafts continuam editáveis sem bloquear agenda, e a regra é revalidada na aprovação. A abordagem é dependente de disciplina transacional na camada de serviço; futuras operações que criem estados bloqueantes devem reutilizar o mesmo caminho.

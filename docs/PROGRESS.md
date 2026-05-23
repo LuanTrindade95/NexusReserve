@@ -6,7 +6,7 @@
 | Fase 02 — Fundação da arquitetura e infraestrutura | ✓ concluída | f35e65a |
 | Fase 3A — Autenticação API e autorização base | ✓ concluída | 1f3b6ac |
 | Fase 3B — CRUD de tipos de recurso e recursos | ✓ concluída | 0800ff0 |
-| Fase 05 — Ciclo de reservas e conflitos | ⏳ pendente | — |
+| Fase 05 — Ciclo de reservas e conflitos | ✓ concluída | 390f1ab |
 | Fase 06 — Auditoria, realtime e notificações | ⏳ pendente | — |
 | Fase 07 — Frontend SPA e UX enterprise | ⏳ pendente | — |
 | Fase 08 — Testes, documentação final e hardening | ⏳ pendente | — |
