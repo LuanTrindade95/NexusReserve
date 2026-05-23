@@ -111,3 +111,25 @@ Usar Angular Signals nos serviços centrais (`AuthService`, `LoadingService`, `T
 
 ### Consequências
 O estado fica simples, tipado e direto para componentes standalone. Menos boilerplate acelera evolução sem prejudicar testabilidade. Se fluxos futuros de reservas exigirem cache complexo, optimistic updates ou sincronização realtime ampla, a decisão pode ser revisitada com escopo concreto.
+
+## ADR-11 — Filtros como estado na URL
+
+### Contexto
+As telas operacionais de recursos e reservas precisam permitir revisão, compartilhamento e retomada de listas filtradas sem depender de estado invisível no componente. Filtros locais apenas em signals seriam rápidos, mas frágeis para navegação, refresh e suporte.
+
+### Decisão
+Persistir filtros, paginação e recortes principais em query params, sincronizando `ActivatedRoute.queryParamMap` com signals e controles de formulário. As telas continuam usando signals para renderização local, mas a URL é o contrato de navegação.
+
+### Consequências
+Links de listas filtradas ficam reproduzíveis e o usuário pode usar voltar/avançar do navegador com previsibilidade. A implementação exige cuidado para evitar loops de sincronização, mas mantém a experiência coerente com painéis administrativos maduros.
+
+## ADR-12 — UI sugere conflito, backend decide
+
+### Contexto
+O formulário de criação de reserva deve avisar conflitos antes do envio para reduzir tentativa e erro. Porém a regra central depende de transação, `lockForUpdate`, reservas bloqueantes e blackouts, portanto não pode ser delegada ao frontend.
+
+### Decisão
+Implementar no Angular uma checagem de disponibilidade apenas como dica de UX, consultando reservas visíveis e blackouts do recurso selecionado. O submit sempre chama a API e trata `409 reservation.conflict` como resposta autoritativa do backend.
+
+### Consequências
+O usuário recebe feedback antecipado, mas a consistência continua protegida pela engine transacional da API. Pode haver diferença entre sugestão local e decisão final em cenários de concorrência ou dados recém-alterados; nesses casos a mensagem do backend prevalece.

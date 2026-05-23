@@ -8,6 +8,7 @@
 | Fase 3B — CRUD de tipos de recurso e recursos | ✓ concluída | 0800ff0 |
 | Fase 3C — Engine de reservas e conflitos transacionais | ✓ concluída | aea91fb |
 | Fase 4A — Fundação frontend Angular e auth shell | ✓ concluída | 7be772a |
+| Fase 4B — Telas de domínio frontend | ✓ concluída | 7621a99 |
 | Fase 06 — Auditoria, realtime e notificações | ⏳ pendente | — |
 | Fase 07 — Frontend SPA e UX enterprise | ⏳ pendente | — |
 | Fase 08 — Testes, documentação final e hardening | ⏳ pendente | — |
