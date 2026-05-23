@@ -5,7 +5,6 @@ use App\Models\Resource;
 use App\Models\ResourceBlackout;
 use App\Models\ResourceType;
 use App\Models\User;
-use App\States\Reservations\Pending;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -30,6 +29,7 @@ function activeResource(array $typeOverrides = [], array $resourceOverrides = []
 {
     $resourceType = ResourceType::factory()->create([
         ...[
+            'requires_approval' => true,
             'max_duration_minutes' => 240,
         ],
         ...$typeOverrides,
@@ -58,7 +58,7 @@ function reservationPayload(Resource $resource, array $overrides = []): array
     ];
 }
 
-it('creates submits approves checks out and returns a reservation', function () {
+it('creates a valid pending reservation', function () {
     $requester = actingReservationUser('requester');
     $resource = activeResource();
 
@@ -67,16 +67,33 @@ it('creates submits approves checks out and returns a reservation', function () 
     $create
         ->assertCreated()
         ->assertJsonPath('data.user_id', $requester->id)
-        ->assertJsonPath('data.status', 'draft');
+        ->assertJsonPath('data.status', 'pending')
+        ->assertJsonPath('data.status_logs.0.from_status', 'draft')
+        ->assertJsonPath('data.status_logs.0.to_status', 'pending');
+});
+
+it('auto-approves reservations for resource types that do not require approval', function () {
+    $requester = actingReservationUser('requester');
+    $resource = activeResource(['requires_approval' => false]);
+
+    $this->postJson('/api/v1/reservations', reservationPayload($resource))
+        ->assertCreated()
+        ->assertJsonPath('data.user_id', $requester->id)
+        ->assertJsonPath('data.status', 'approved')
+        ->assertJsonPath('data.approved_by', $requester->id)
+        ->assertJsonPath('data.status_logs.0.from_status', 'draft')
+        ->assertJsonPath('data.status_logs.0.to_status', 'approved');
+});
+
+it('runs the full pending approved checked out returned flow with logs', function () {
+    actingReservationUser('requester');
+    $resource = activeResource();
+
+    $create = $this->postJson('/api/v1/reservations', reservationPayload($resource))
+        ->assertCreated()
+        ->assertJsonPath('data.status', 'pending');
 
     $reservationId = $create->json('data.id');
-
-    $this->postJson("/api/v1/reservations/{$reservationId}/submit", [
-        'note' => 'Ready for approval',
-    ])
-        ->assertOk()
-        ->assertJsonPath('data.status', 'pending')
-        ->assertJsonPath('data.status_logs.0.to_status', 'pending');
 
     actingReservationUser('manager');
 
@@ -148,7 +165,7 @@ it('rejects and cancels pending reservations', function () {
         ->assertJsonPath('data.status_logs.0.note', 'Requester changed plans.');
 });
 
-it('prevents overlapping blocking reservations on submit', function () {
+it('prevents overlapping blocking reservations on create', function () {
     $requester = actingReservationUser('requester');
     $resource = activeResource();
 
@@ -161,22 +178,16 @@ it('prevents overlapping blocking reservations on submit', function () {
             'ends_at' => now()->addDay()->setTime(10, 30),
         ]);
 
-    $draft = Reservation::factory()
-        ->for($resource)
-        ->for($requester)
-        ->create([
-            'status' => 'draft',
-            'starts_at' => now()->addDay()->setTime(10, 0),
-            'ends_at' => now()->addDay()->setTime(11, 0),
-        ]);
-
-    $this->postJson("/api/v1/reservations/{$draft->id}/submit")
+    $this->postJson('/api/v1/reservations', reservationPayload($resource, [
+        'starts_at' => now()->addDay()->setTime(10, 0)->toIso8601String(),
+        'ends_at' => now()->addDay()->setTime(11, 0)->toIso8601String(),
+    ]))
         ->assertStatus(409)
         ->assertJsonPath('code', 'reservation.conflict');
 });
 
-it('prevents reservations over resource blackouts on submit', function () {
-    $requester = actingReservationUser('requester');
+it('prevents reservations over resource blackouts on create', function () {
+    actingReservationUser('requester');
     $resource = activeResource();
 
     ResourceBlackout::factory()
@@ -186,18 +197,37 @@ it('prevents reservations over resource blackouts on submit', function () {
             'ends_at' => now()->addDay()->setTime(10, 30),
         ]);
 
-    $draft = Reservation::factory()
-        ->for($resource)
-        ->for($requester)
-        ->create([
-            'status' => 'draft',
-            'starts_at' => now()->addDay()->setTime(9, 0),
-            'ends_at' => now()->addDay()->setTime(10, 0),
-        ]);
-
-    $this->postJson("/api/v1/reservations/{$draft->id}/submit")
+    $this->postJson('/api/v1/reservations', reservationPayload($resource))
         ->assertStatus(409)
         ->assertJsonPath('code', 'reservation.conflict');
+});
+
+it('rejects reservations longer than the resource type max duration', function () {
+    actingReservationUser('requester');
+    $resource = activeResource(['max_duration_minutes' => 60]);
+
+    $this->postJson('/api/v1/reservations', reservationPayload($resource, [
+        'starts_at' => now()->addDay()->setTime(9, 0)->toIso8601String(),
+        'ends_at' => now()->addDay()->setTime(10, 30)->toIso8601String(),
+    ]))
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'validation.failed')
+        ->assertJsonValidationErrors('ends_at');
+});
+
+it('returns 422 for invalid reservation transitions', function () {
+    $requester = actingReservationUser('requester');
+    $resource = activeResource();
+    $reservation = Reservation::factory()
+        ->for($resource)
+        ->for($requester)
+        ->create(['status' => 'checked_out']);
+
+    actingReservationUser('manager');
+
+    $this->postJson("/api/v1/reservations/{$reservation->id}/approve")
+        ->assertUnprocessable()
+        ->assertJsonPath('code', 'reservation.invalid_transition');
 });
 
 it('scopes reservation listing to own records unless user can view all', function () {
@@ -228,7 +258,7 @@ it('updates only draft reservations and exposes audits', function () {
     $reservation = Reservation::factory()
         ->for($resource)
         ->for($requester)
-        ->create(['status' => 'draft', 'purpose' => 'Original purpose']);
+        ->create(['status' => 'pending', 'purpose' => 'Original purpose']);
 
     $this->putJson("/api/v1/reservations/{$reservation->id}", reservationPayload($resource, [
         'purpose' => 'Updated purpose',
@@ -236,7 +266,7 @@ it('updates only draft reservations and exposes audits', function () {
         ->assertOk()
         ->assertJsonPath('data.purpose', 'Updated purpose');
 
-    $reservation->status->transitionTo(Pending::class, $requester->id, 'Submitted');
+    $reservation->forceFill(['status' => 'approved'])->save();
 
     $this->putJson("/api/v1/reservations/{$reservation->id}", reservationPayload($resource, [
         'purpose' => 'Should fail',
