@@ -26,3 +26,21 @@ body {
   min-height: 100vh;
   margin: 0;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer base {
+  :focus-visible {
+    outline: 3px solid rgb(6 182 212 / 0.35);
+    outline-offset: 2px;
+  }
+}
