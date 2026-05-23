@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Resources\ResourceBlackoutController;
 use App\Http\Controllers\Api\V1\Resources\ResourceController;
 use App\Http\Controllers\Api\V1\Resources\ResourceTypeController;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,12 @@ Route::prefix('v1')->group(function () {
             ->only(['index', 'show']);
         Route::apiResource('resources', ResourceController::class)
             ->only(['store', 'update', 'destroy'])
+            ->middleware('permission:resources.manage');
+
+        Route::get('resources/{resource}/blackouts', [ResourceBlackoutController::class, 'index']);
+        Route::post('resources/{resource}/blackouts', [ResourceBlackoutController::class, 'store'])
+            ->middleware('permission:resources.manage');
+        Route::delete('resources/{resource}/blackouts/{blackout}', [ResourceBlackoutController::class, 'destroy'])
             ->middleware('permission:resources.manage');
 
     });
