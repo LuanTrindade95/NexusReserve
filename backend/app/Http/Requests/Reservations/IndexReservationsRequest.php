@@ -19,6 +19,7 @@ class IndexReservationsRequest extends FormRequest
     {
         return [
             'resource_id' => ['sometimes', 'integer', Rule::exists('resources', 'id')],
+            'mine' => ['sometimes', 'boolean'],
             'user_id' => ['sometimes', 'integer', Rule::exists('users', 'id')],
             'status' => ['sometimes', 'string', Rule::in([
                 'draft',

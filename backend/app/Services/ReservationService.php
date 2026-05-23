@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Data\ReservationData;
+use App\Events\ReservationStatusChanged;
 use App\Exceptions\ReservationConflictException;
 use App\Models\Reservation;
 use App\Models\Resource;
@@ -33,7 +34,7 @@ class ReservationService
             ->with(['resource.resourceType', 'user', 'approver'])
             ->withCount('statusLogs');
 
-        if (! $user->can('reservations.view-all')) {
+        if (($filters['mine'] ?? false) || ! $user->can('reservations.view-all')) {
             $query->where('user_id', $user->id);
         } elseif (isset($filters['user_id'])) {
             $query->where('user_id', $filters['user_id']);
@@ -71,25 +72,51 @@ class ReservationService
 
     public function create(ReservationData $data): Reservation
     {
-        $this->assertReservableWindow($data->resourceId, $data->startsAt, $data->endsAt);
+        return DB::transaction(function () use ($data) {
+            $resource = $this->lockResource($data->resourceId);
+            $startsAt = Carbon::parse($data->startsAt);
+            $endsAt = Carbon::parse($data->endsAt);
 
-        return Reservation::create($data->toModelAttributes())
-            ->load(['resource.resourceType', 'user', 'approver', 'statusLogs']);
+            $this->assertResourceCanBlockAvailability($resource);
+            $this->assertMaxDuration($resource, $startsAt, $endsAt);
+            $this->assertNoConflict($resource, $startsAt, $endsAt);
+
+            $reservation = Reservation::create([
+                ...$data->toModelAttributes(),
+                'status' => 'draft',
+            ]);
+
+            if ($resource->resourceType?->requires_approval === false) {
+                return $this->autoApprove($reservation, $data->userId);
+            }
+
+            $reservation->status->transitionTo(Pending::class, $data->userId, 'Submitted for approval');
+
+            return $reservation->refresh()->load(['resource.resourceType', 'user', 'approver', 'statusLogs']);
+        });
     }
 
     public function update(Reservation $reservation, ReservationData $data): Reservation
     {
-        if ($reservation->status->getValue() !== 'draft') {
+        if (! in_array($reservation->status->getValue(), ['draft', 'pending'], true)) {
             throw ValidationException::withMessages([
-                'status' => ['Only draft reservations can be edited.'],
+                'status' => ['Only draft or pending reservations can be edited.'],
             ]);
         }
 
-        $this->assertReservableWindow($data->resourceId, $data->startsAt, $data->endsAt);
+        return DB::transaction(function () use ($reservation, $data) {
+            $resource = $this->lockResource($data->resourceId);
+            $startsAt = Carbon::parse($data->startsAt);
+            $endsAt = Carbon::parse($data->endsAt);
 
-        $reservation->update($data->toModelAttributes());
+            $this->assertResourceCanBlockAvailability($resource);
+            $this->assertMaxDuration($resource, $startsAt, $endsAt);
+            $this->assertNoConflict($resource, $startsAt, $endsAt, $reservation->id);
 
-        return $reservation->refresh()->load(['resource.resourceType', 'user', 'approver', 'statusLogs']);
+            $reservation->update($data->toModelAttributes());
+
+            return $reservation->refresh()->load(['resource.resourceType', 'user', 'approver', 'statusLogs']);
+        });
     }
 
     public function delete(Reservation $reservation): void
@@ -177,12 +204,28 @@ class ReservationService
         });
     }
 
-    private function assertReservableWindow(int $resourceId, string $startsAt, string $endsAt): void
+    private function autoApprove(Reservation $reservation, int $actorId): Reservation
     {
-        $resource = Resource::with('resourceType')->findOrFail($resourceId);
+        $reservation->forceFill([
+            'status' => 'approved',
+            'approved_by' => $actorId,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+            'cancelled_at' => null,
+        ])->save();
 
-        $this->assertResourceCanBlockAvailability($resource);
-        $this->assertMaxDuration($resource, Carbon::parse($startsAt), Carbon::parse($endsAt));
+        $statusLog = $reservation->statusLogs()->create([
+            'from_status' => 'draft',
+            'to_status' => 'approved',
+            'changed_by' => $actorId,
+            'note' => 'Auto-approved because the resource type does not require approval.',
+        ]);
+
+        $reservation->refresh();
+
+        ReservationStatusChanged::dispatch($reservation, $statusLog);
+
+        return $reservation->load(['resource.resourceType', 'user', 'approver', 'statusLogs']);
     }
 
     private function lockResource(int $resourceId): Resource

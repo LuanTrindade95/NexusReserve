@@ -26,8 +26,7 @@ class ReservationPolicy
 
     public function update(User $user, Reservation $reservation): bool
     {
-        return $user->can('reservations.view-all')
-            || ($user->can('reservations.create') && $reservation->user_id === $user->id);
+        return $user->can('reservations.create') && $reservation->user_id === $user->id;
     }
 
     public function delete(User $user, Reservation $reservation): bool
