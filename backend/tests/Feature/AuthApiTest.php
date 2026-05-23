@@ -5,6 +5,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\PersonalAccessToken;
 
 uses(RefreshDatabase::class);
 
@@ -77,6 +78,35 @@ it('returns the authenticated user roles and permissions', function () {
         ->assertJsonPath('data.id', $user->id)
         ->assertJsonPath('data.roles.0', 'manager')
         ->assertJsonFragment(['reservations.approve']);
+});
+
+it('revokes the current access token on logout', function () {
+    $user = User::factory()->create([
+        'password' => Hash::make('password'),
+    ]);
+
+    $user->assignRole('requester');
+
+    $login = $this->postJson('/api/v1/auth/login', [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $token = $login->json('token');
+
+    $this
+        ->withToken($token)
+        ->postJson('/api/v1/auth/logout')
+        ->assertNoContent();
+
+    expect(PersonalAccessToken::findToken($token))->toBeNull();
+
+    $this->app['auth']->forgetGuards();
+
+    $this
+        ->withToken($token)
+        ->getJson('/api/v1/auth/me')
+        ->assertUnauthorized();
 });
 
 it('rejects protected routes without a token', function () {
