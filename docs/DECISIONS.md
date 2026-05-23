@@ -89,3 +89,25 @@ Adotar a semântica de intervalo meio-aberto `[starts_at, ends_at)`. A sobreposi
 
 ### Consequências
 A regra fica simples, indexável e adequada para calendários operacionais. O frontend pode exibir disponibilidade com a mesma semântica, mas o backend continua sendo a fonte de verdade.
+
+## ADR-09 — Token em memória sem persistência local
+
+### Contexto
+A SPA precisa autenticar contra `/api/v1/auth` sem expor credenciais ou tokens em armazenamento persistente do navegador. `localStorage` e `sessionStorage` são simples, mas ampliam o impacto de XSS porque mantêm o token acessível por JavaScript após reloads.
+
+### Decisão
+Manter o token Sanctum Bearer somente em memória dentro do `AuthService`. O usuário autenticado também vive em signal no runtime da aplicação. Um reload limpa a sessão client-side e exige novo login. Interceptors funcionais leem o token exclusivamente do `AuthService`.
+
+### Consequências
+A estratégia reduz persistência indevida de token sensível e simplifica o MVP. A troca é menor conveniência em refresh de página. Se o produto exigir sessão persistente, a evolução preferida é cookie HTTP-only/SameSite com fluxo Sanctum cookie-based, não token em `localStorage`.
+
+## ADR-10 — Estado de frontend com Angular Signals, sem NgRx
+
+### Contexto
+O frontend ainda está na fundação: auth, loading, toast, guards e shell. O estado global é pequeno, fortemente local ao runtime e não exige event sourcing, cache normalizado ou workflows complexos de reducers/effects.
+
+### Decisão
+Usar Angular Signals nos serviços centrais (`AuthService`, `LoadingService`, `ToastService`) e guards/interceptors funcionais. Não introduzir NgRx nesta fase.
+
+### Consequências
+O estado fica simples, tipado e direto para componentes standalone. Menos boilerplate acelera evolução sem prejudicar testabilidade. Se fluxos futuros de reservas exigirem cache complexo, optimistic updates ou sincronização realtime ampla, a decisão pode ser revisitada com escopo concreto.
