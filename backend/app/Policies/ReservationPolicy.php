@@ -39,4 +39,9 @@ class ReservationPolicy
     {
         return $user->can('reservations.approve');
     }
+
+    public function viewAudit(User $user, Reservation $reservation): bool
+    {
+        return $user->can('audit.view');
+    }
 }

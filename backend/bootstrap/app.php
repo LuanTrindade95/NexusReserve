@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\ReservationConflictException;
 use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -10,6 +11,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Spatie\ModelStates\Exceptions\CouldNotPerformTransition;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
@@ -47,6 +49,21 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'The given data was invalid.',
                     'code' => 'validation.failed',
                     'errors' => $exception->errors(),
+                ], 422);
+            }
+
+            if ($exception instanceof ReservationConflictException) {
+                return response()->json([
+                    'message' => $exception->getMessage(),
+                    'code' => 'reservation.conflict',
+                    'errors' => $exception->errors(),
+                ], 409);
+            }
+
+            if ($exception instanceof CouldNotPerformTransition) {
+                return response()->json([
+                    'message' => 'The requested reservation transition is not allowed.',
+                    'code' => 'reservation.invalid_transition',
                 ], 422);
             }
 

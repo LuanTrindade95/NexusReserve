@@ -21,6 +21,26 @@ class ReservationData extends Data
         public readonly ?string $cancelledAt,
     ) {}
 
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    public static function fromValidated(array $validated, int $userId, ?Reservation $reservation = null): self
+    {
+        return new self(
+            id: $reservation?->id,
+            resourceId: $validated['resource_id'],
+            userId: $userId,
+            startsAt: $validated['starts_at'],
+            endsAt: $validated['ends_at'],
+            status: $reservation?->status->getValue() ?? 'draft',
+            purpose: $validated['purpose'],
+            approvedBy: $reservation?->approved_by,
+            approvedAt: $reservation?->approved_at?->toIso8601String(),
+            rejectionReason: $reservation?->rejection_reason,
+            cancelledAt: $reservation?->cancelled_at?->toIso8601String(),
+        );
+    }
+
     public static function fromModel(Reservation $reservation): self
     {
         return new self(
@@ -36,5 +56,24 @@ class ReservationData extends Data
             rejectionReason: $reservation->rejection_reason,
             cancelledAt: $reservation->cancelled_at?->toIso8601String(),
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toModelAttributes(): array
+    {
+        return [
+            'resource_id' => $this->resourceId,
+            'user_id' => $this->userId,
+            'starts_at' => $this->startsAt,
+            'ends_at' => $this->endsAt,
+            'status' => $this->status,
+            'purpose' => $this->purpose,
+            'approved_by' => $this->approvedBy,
+            'approved_at' => $this->approvedAt,
+            'rejection_reason' => $this->rejectionReason,
+            'cancelled_at' => $this->cancelledAt,
+        ];
     }
 }
