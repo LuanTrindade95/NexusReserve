@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Resources\ResourceTypeController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -11,5 +12,14 @@ Route::prefix('v1')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
             Route::get('me', [AuthController::class, 'me']);
         });
+    });
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::apiResource('resource-types', ResourceTypeController::class)
+            ->only(['index', 'show']);
+        Route::apiResource('resource-types', ResourceTypeController::class)
+            ->only(['store', 'update', 'destroy'])
+            ->middleware('permission:resources.manage');
+
     });
 });
