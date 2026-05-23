@@ -45,3 +45,14 @@ Criar índice composto em `reservations(resource_id, status, starts_at, ends_at)
 
 ### Consequências
 A estrutura já favorece o caminho de consulta crítico sem antecipar a regra de conflito. A integridade contra corrida ainda dependerá da implementação de domínio/aplicação com transação e lock no recurso.
+
+## ADR-05 — Sanctum token SPA e formato de erro padrão
+
+### Contexto
+A SPA Angular precisa consumir uma API versionada com autenticação simples, RBAC por permissões e respostas de erro previsíveis. O projeto ainda não exige OAuth completo nem integração externa de identidade.
+
+### Decisão
+Usar Laravel Sanctum com tokens Bearer emitidos por `/api/v1/auth/login`, protegendo rotas com `auth:sanctum` e permissões Spatie via middleware `permission:`. Padronizar erros JSON em `/api/*` como `{ message, code, errors? }`, com status HTTP corretos para autenticação, autorização, validação, não encontrado e erro interno.
+
+### Consequências
+O frontend recebe um contrato estável para login, sessão atual e tratamento de falhas. A autorização permanece declarativa por middleware/policies e aproveita as permissões seedadas. Tokens Bearer simplificam o MVP, mas exigem cuidado no armazenamento client-side e podem evoluir para fluxo cookie-based se a estratégia de segurança do SPA mudar.
