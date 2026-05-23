@@ -68,13 +68,24 @@ Adotar o fluxo `Controller -> Service -> Model`, usando Form Requests para valid
 ### Consequências
 Controllers ficam finos e previsíveis, services concentram regras de persistência/filtros e o contrato JSON permanece separado dos models. A abordagem adiciona alguns arquivos por recurso, mas mantém a API preparada para regras futuras sem antecipar a lógica de reservas/conflitos.
 
-## ADR-07 — Conflito de reservas com lock transacional no recurso
+## ADR-07 — Detecção de conflito via transação e lockForUpdate
 
 ### Contexto
-A disponibilidade de um recurso é o ponto crítico do domínio: duas reservas bloqueantes não podem ocupar a mesma janela e reservas não podem sobrepor janelas de bloqueio. MySQL não oferece exclusion constraint nativa para intervalos, então a consistência depende da aplicação.
+A disponibilidade de um recurso é o ponto crítico do domínio: duas reservas bloqueantes não podem ocupar a mesma janela e reservas não podem sobrepor janelas de bloqueio. MySQL não oferece exclusion constraint nativa para intervalos como PostgreSQL com GiST/exclusion constraints, então a consistência precisa ser garantida pela aplicação dentro de uma transação.
 
 ### Decisão
-Aplicar a checagem de disponibilidade no `ReservationService` durante as transições que bloqueiam agenda (`draft -> pending` e `pending -> approved`). A operação roda em transação, bloqueia a linha do recurso com `lockForUpdate`, consulta reservas em `pending`, `approved` e `checked_out` usando intervalo semiaberto `[starts_at, ends_at)`, e também consulta `resource_blackouts`. Conflitos retornam `409` com `code: reservation.conflict`.
+Aplicar a checagem de disponibilidade no `ReservationService::create()`, dentro de uma transação. O serviço bloqueia a linha do recurso com `lockForUpdate`, valida duração máxima do `ResourceType`, consulta reservas em `pending`, `approved` e `checked_out`, consulta `resource_blackouts` e só então cria a reserva já em `pending` ou `approved` quando o tipo não exige aprovação. Conflitos retornam `409` com `code: reservation.conflict`.
 
 ### Consequências
-O backend permanece fonte de verdade para disponibilidade e reduz corrida entre submissões concorrentes do mesmo recurso. Drafts continuam editáveis sem bloquear agenda, e a regra é revalidada na aprovação. A abordagem é dependente de disciplina transacional na camada de serviço; futuras operações que criem estados bloqueantes devem reutilizar o mesmo caminho.
+O backend permanece fonte de verdade para disponibilidade e reduz corrida entre criações concorrentes do mesmo recurso. A garantia depende de todas as operações que criam estados bloqueantes passarem pelo serviço transacional. O teste de concorrência usa MySQL real e prova que duas criações simultâneas para o mesmo slot resultam em uma única reserva persistida.
+
+## ADR-08 — Semântica de sobreposição com intervalo meio-aberto
+
+### Contexto
+Reservas usam janelas temporais com início inclusivo e fim exclusivo. Sem uma regra explícita, reservas adjacentes poderiam ser tratadas como conflito ou não conflito de forma inconsistente entre backend e frontend.
+
+### Decisão
+Adotar a semântica de intervalo meio-aberto `[starts_at, ends_at)`. A sobreposição é verdadeira quando `new.starts_at < existing.ends_at` e `new.ends_at > existing.starts_at`. Assim, uma reserva que termina às 10:00 e outra que começa às 10:00 não conflitam.
+
+### Consequências
+A regra fica simples, indexável e adequada para calendários operacionais. O frontend pode exibir disponibilidade com a mesma semântica, mas o backend continua sendo a fonte de verdade.
