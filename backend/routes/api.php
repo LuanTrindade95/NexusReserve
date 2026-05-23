@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Resources\ResourceController;
 use App\Http\Controllers\Api\V1\Resources\ResourceTypeController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,18 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('resource-types', ResourceTypeController::class)
             ->only(['index', 'show']);
         Route::apiResource('resource-types', ResourceTypeController::class)
+            ->only(['store', 'update', 'destroy'])
+            ->middleware('permission:resources.manage');
+
+        Route::post('resources/{resource}/restore', [ResourceController::class, 'restore'])
+            ->whereNumber('resource')
+            ->middleware('permission:resources.manage');
+        Route::get('resources/{resource}/audits', [ResourceController::class, 'audits'])
+            ->middleware('permission:audit.view');
+
+        Route::apiResource('resources', ResourceController::class)
+            ->only(['index', 'show']);
+        Route::apiResource('resources', ResourceController::class)
             ->only(['store', 'update', 'destroy'])
             ->middleware('permission:resources.manage');
 
