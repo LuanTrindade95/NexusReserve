@@ -133,3 +133,25 @@ Implementar no Angular uma checagem de disponibilidade apenas como dica de UX, c
 
 ### Consequências
 O usuário recebe feedback antecipado, mas a consistência continua protegida pela engine transacional da API. Pode haver diferença entre sugestão local e decisão final em cenários de concorrência ou dados recém-alterados; nesses casos a mensagem do backend prevalece.
+
+## ADR-13 — Reverb com canais privados e presence autorizados
+
+### Contexto
+Reservas e disponibilidade precisam atualizar a operação sem refresh, mas os eventos carregam dados sensíveis de agenda, recurso e usuário. Canais abertos vazariam estado operacional entre perfis sem permissão.
+
+### Decisão
+Usar Laravel Reverb com Echo/Pusher no Angular. Eventos de status entram em canais privados do dono (`users.{id}`), do recurso (`resources.{id}`) e em um canal presence de gestores (`managers.reservations`). A autorização dos canais usa Sanctum e permissões Spatie: dono acessa apenas seu canal, gestores/admins acessam canais operacionais conforme `reservations.view-all`, `resources.manage` ou `reservations.approve`.
+
+### Consequências
+O realtime segue o mesmo modelo de RBAC da API e evita broadcast público de reservas. A UI atualiza via signals quando eventos chegam e mantém reconciliação leve por polling para degradar sem quebrar a tela caso o WebSocket caia ou perca evento.
+
+## ADR-14 — Notificações via fila e database channel
+
+### Contexto
+Criação, aprovação e rejeição de reservas disparam mensagens para gestores e solicitantes. Essas notificações não devem bloquear a transição de estado nem depender de o usuário estar conectado no momento.
+
+### Decisão
+Usar Laravel Notifications com canais `database` e `broadcast`, processadas por Redis/Horizon. Reservas pendentes notificam usuários com `reservations.approve`; decisões `approved`/`rejected` notificam o dono. A API `/api/v1/notifications` lista notificações e permite marcar uma ou todas como lidas.
+
+### Consequências
+O sino do frontend combina histórico persistente com push em tempo real. Horizon absorve o trabalho assíncrono e a notificação permanece disponível após reconnect/reload controlado, ao custo de exigir Redis/Horizon saudáveis no ambiente Docker.
