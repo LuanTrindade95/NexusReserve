@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\AuthController;
+use App\Http\Controllers\Api\V1\Notifications\NotificationController;
 use App\Http\Controllers\Api\V1\Reservations\ReservationController;
 use App\Http\Controllers\Api\V1\Resources\ResourceBlackoutController;
 use App\Http\Controllers\Api\V1\Resources\ResourceController;
@@ -55,6 +56,10 @@ Route::prefix('v1')->group(function () {
         Route::get('reservations/{reservation}/audits', [ReservationController::class, 'audits'])
             ->middleware('permission:audit.view');
         Route::apiResource('reservations', ReservationController::class);
+
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     });
 });
