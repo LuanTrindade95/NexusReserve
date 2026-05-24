@@ -3,7 +3,10 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '@app/core/auth/auth.service';
 import { LoadingService } from '@app/core/loading/loading.service';
+import { RealtimeService } from '@app/core/realtime/realtime.service';
 import { ToastService } from '@app/core/toast/toast.service';
+import { NotificationBellComponent } from '@app/features/notifications/notification-bell/notification-bell.component';
+import { NotificationsService } from '@app/features/notifications/notifications.service';
 import { ButtonComponent } from '@app/shared/ui/button/button.component';
 import { CalendarDays, Gauge, LogOut, Menu, PackageSearch, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-angular';
 import { LucideAngularModule } from 'lucide-angular';
@@ -17,7 +20,7 @@ interface NavigationItem {
 
 @Component({
   selector: 'app-shell',
-  imports: [ButtonComponent, LucideAngularModule, NgClass, RouterLink, RouterOutlet],
+  imports: [ButtonComponent, LucideAngularModule, NgClass, NotificationBellComponent, RouterLink, RouterOutlet],
   template: `
     <div class="min-h-screen bg-surface">
       <aside
@@ -98,6 +101,12 @@ interface NavigationItem {
             @if (loading.isLoading()) {
               <span class="hidden text-sm font-semibold text-enterprise-cyan sm:inline">Syncing</span>
             }
+            <span
+              class="hidden h-2.5 w-2.5 rounded-full sm:inline-block"
+              [ngClass]="realtime.isConnected() ? 'bg-success' : 'bg-warning'"
+              [title]="realtime.isConnected() ? 'Realtime connected' : 'Realtime reconnecting'"
+            ></span>
+            <app-notification-bell />
             <div class="hidden text-right sm:block">
               <p class="text-sm font-bold text-midnight-blue">{{ auth.currentUser()?.name }}</p>
               <p class="text-xs text-slate-500">{{ auth.currentUser()?.email }}</p>
@@ -120,6 +129,8 @@ interface NavigationItem {
 export class AppShellComponent {
   readonly auth = inject(AuthService);
   readonly loading = inject(LoadingService);
+  readonly realtime = inject(RealtimeService);
+  private readonly notifications = inject(NotificationsService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
 
@@ -141,6 +152,11 @@ export class AppShellComponent {
     return item.permission ? this.auth.hasPermission(item.permission) : true;
   }));
 
+  constructor() {
+    this.realtime.connect();
+    this.notifications.load();
+  }
+
   toggleCollapsed(): void {
     this.collapsed.update((value) => !value);
   }
@@ -148,10 +164,12 @@ export class AppShellComponent {
   logout(): void {
     this.auth.logout().subscribe({
       next: () => {
+        this.realtime.disconnect();
         this.toast.info('Signed out');
         void this.router.navigate(['/login']);
       },
       error: () => {
+        this.realtime.disconnect();
         this.auth.clearSession();
         void this.router.navigate(['/login']);
       },

@@ -14,7 +14,7 @@ declare global {
 }
 
 const DEFAULT_REALTIME_CONFIG: RealtimeConfig = {
-  appKey: '',
+  appKey: 'nexus-reserve-local-key',
   host: 'localhost',
   port: 8080,
   scheme: 'http',

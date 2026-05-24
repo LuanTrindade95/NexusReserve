@@ -1,10 +1,11 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '@app/core/auth/auth.service';
+import { RealtimeService } from '@app/core/realtime/realtime.service';
 import { ToastService } from '@app/core/toast/toast.service';
 import { ReservationsApiService } from '@app/features/reservations/reservations-api.service';
 import { Reservation } from '@app/features/reservations/reservations.models';
@@ -149,6 +150,7 @@ export class ReservationDetailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly toast = inject(ToastService);
+  private readonly realtime = inject(RealtimeService);
 
   readonly backIcon = ArrowLeft;
   readonly checkIcon = Check;
@@ -171,9 +173,20 @@ export class ReservationDetailComponent {
   readonly hasVisibleActions = computed(() => {
     return this.canApprove() || this.canReject() || this.canCheckOut() || this.canReturn() || this.canCancel();
   });
+  private readonly reconcileTimer = window.setInterval(() => this.load(true), 5000);
 
   constructor() {
     this.load();
+    this.destroyRef.onDestroy(() => window.clearInterval(this.reconcileTimer));
+
+    effect(() => {
+      const event = this.realtime.reservationStatusChanged();
+      const current = this.reservation();
+
+      if (event !== null && current !== null && event.reservation.id === current.id) {
+        this.reservation.set(event.reservation);
+      }
+    });
   }
 
   approve(): void {
@@ -233,12 +246,17 @@ export class ReservationDetailComponent {
       });
   }
 
-  private load(): void {
+  private load(silent = false): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
 
     this.api.getReservation(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((response) => this.reservation.set(response.data));
+      .subscribe((response) => {
+        this.reservation.set(response.data);
+        if (!silent) {
+          this.realtime.subscribeResource(response.data.resource_id);
+        }
+      });
   }
 
   private payloadMessage(error: HttpErrorResponse): string | null {

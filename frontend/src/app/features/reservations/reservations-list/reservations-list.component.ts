@@ -1,9 +1,10 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiPageMeta } from '@app/core/api/pagination.models';
+import { RealtimeService } from '@app/core/realtime/realtime.service';
 import { ResourcesApiService } from '@app/features/resource-management/resources-api.service';
 import { Resource, ResourceBlackout } from '@app/features/resource-management/resources.models';
 import { ReservationsApiService } from '@app/features/reservations/reservations-api.service';
@@ -209,6 +210,7 @@ export class ReservationsListComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly realtime = inject(RealtimeService);
 
   readonly calendarIcon = CalendarDays;
   readonly listIcon = List;
@@ -276,7 +278,10 @@ export class ReservationsListComponent {
   constructor() {
     this.resourcesApi.listResources({ per_page: 100, sort: 'name' })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((page) => this.resources.set(page.data));
+      .subscribe((page) => {
+        this.resources.set(page.data);
+        page.data.forEach((resource) => this.realtime.subscribeResource(resource.id));
+      });
 
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -290,6 +295,22 @@ export class ReservationsListComponent {
         this.page.set(Number(params.get('page') ?? 1));
         this.load();
       });
+
+    effect(() => {
+      const statusChanged = this.realtime.reservationStatusChanged();
+
+      if (statusChanged !== null) {
+        this.upsertReservation(statusChanged.reservation);
+      }
+    });
+
+    effect(() => {
+      const availabilityChanged = this.realtime.resourceAvailabilityChanged();
+
+      if (availabilityChanged !== null) {
+        this.realtime.subscribeResource(availabilityChanged.resource_id);
+      }
+    });
   }
 
   applyFilters(): void {
@@ -407,5 +428,16 @@ export class ReservationsListComponent {
     const statuses: readonly ReservationStatus[] = ['draft', 'pending', 'approved', 'rejected', 'checked_out', 'returned', 'cancelled'];
 
     return statuses.includes(value as ReservationStatus) ? value as ReservationStatus : undefined;
+  }
+
+  private upsertReservation(reservation: Reservation): void {
+    this.reservations.update((items) => {
+      const exists = items.some((item) => item.id === reservation.id);
+      const next = exists
+        ? items.map((item) => item.id === reservation.id ? reservation : item)
+        : [reservation, ...items];
+
+      return [...next].sort((left, right) => new Date(left.starts_at).getTime() - new Date(right.starts_at).getTime());
+    });
   }
 }
