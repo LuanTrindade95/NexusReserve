@@ -155,3 +155,25 @@ Usar Laravel Notifications com canais `database` e `broadcast`, processadas por 
 
 ### Consequências
 O sino do frontend combina histórico persistente com push em tempo real. Horizon absorve o trabalho assíncrono e a notificação permanece disponível após reconnect/reload controlado, ao custo de exigir Redis/Horizon saudáveis no ambiente Docker.
+
+## ADR-15 — CORS explícito para autenticação de canais Reverb
+
+### Contexto
+O Echo autentica canais privados e presence por `POST /broadcasting/auth`, fora do prefixo `/api/*`. A política CORS anterior cobria apenas a API versionada e `sanctum/csrf-cookie`, então o navegador bloqueava a autenticação do canal a partir de `http://localhost:4200` antes que Sanctum pudesse validar o token Bearer.
+
+### Decisão
+Incluir `broadcasting/auth` em `config/cors.php`, mantendo `supports_credentials=true`, os origins controlados por `FRONTEND_URL`/localhost e os headers necessários para `Authorization: Bearer`. O frontend continua usando o endpoint derivado de `API_BASE_URL` e enviando o token em `auth.headers.Authorization`.
+
+### Consequências
+O handshake WebSocket continua separado da autorização HTTP dos canais, mas o preflight CORS passa para o origin do SPA. A autenticação real permanece em `routes/channels.php` com Sanctum e RBAC; CORS apenas permite que o navegador faça a requisição.
+
+## ADR-16 — Listener síncrono, notificações enfileiradas
+
+### Contexto
+`ReservationStatusChanged` é o evento de domínio emitido quando um log de status é criado. O listener que escolhe destinatários também estava enfileirado, enquanto as próprias notificações já implementavam `ShouldQueue`. Em ambiente Docker com Redis, isso criava uma fila em duas etapas: o evento chegava ao dispatcher, mas o handler do listener não executava no mesmo processo, atrasando ou ocultando o envio esperado das notificações.
+
+### Decisão
+Manter a emissão do evento no ponto em que o status log é criado e executar `QueueReservationStatusNotification` de forma síncrona. O listener apenas decide destinatários e chama `notify`; o trabalho assíncrono permanece nas notificações `ReservationPendingApprovalNotification` e `ReservationDecisionNotification`, que continuam enfileiradas pelo Laravel Notifications.
+
+### Consequências
+Qualquer transição por state machine aciona imediatamente a escolha de destinatários sem duplicar dispatch de evento. A entrega pesada continua fora do request via fila de notificações, e os testes conseguem observar o envio sem depender de um worker externo para processar o listener.
