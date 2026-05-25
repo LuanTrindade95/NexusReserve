@@ -15,7 +15,7 @@ jobs:
       APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       DB_CONNECTION: sqlite
       DB_DATABASE: ':memory:'
-      BROADCAST_CONNECTION: null
+      BROADCAST_CONNECTION: 'null'
       REVERB_APP_ID: nexus-reserve-test
       REVERB_APP_KEY: nexus-reserve-test-key
       REVERB_APP_SECRET: nexus-reserve-test-secret
