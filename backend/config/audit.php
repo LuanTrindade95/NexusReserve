@@ -35,6 +35,7 @@ return [
         'guards' => [
             'web',
             'api',
+            'sanctum',
         ],
         'resolver' => UserResolver::class,
     ],
