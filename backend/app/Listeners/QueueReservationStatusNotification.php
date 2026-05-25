@@ -7,10 +7,9 @@ use App\Events\ResourceAvailabilityChanged;
 use App\Models\User;
 use App\Notifications\ReservationDecisionNotification;
 use App\Notifications\ReservationPendingApprovalNotification;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Spatie\Permission\Models\Permission;
 
-class QueueReservationStatusNotification implements ShouldQueue
+class QueueReservationStatusNotification
 {
     public function handle(ReservationStatusChanged $event): void
     {
