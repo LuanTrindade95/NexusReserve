@@ -57,7 +57,7 @@ interface ResourceForm {
       </section>
 
       <app-card>
-        <form class="grid gap-3 lg:grid-cols-[1fr_14rem_12rem_auto]" (ngSubmit)="applyFilters()">
+        <form class="grid gap-3 lg:grid-cols-[1fr_14rem_12rem_auto]" (submit)="applyFilters($event)">
           <label class="block">
             <span class="mb-1.5 block text-sm font-semibold text-slate-700">Search</span>
             <span class="relative block">
@@ -261,7 +261,9 @@ export class ResourcesListComponent {
       });
   }
 
-  applyFilters(): void {
+  applyFilters(event?: Event): void {
+    event?.preventDefault();
+
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
@@ -385,7 +387,8 @@ export class ResourcesListComponent {
 
   private toPayload(): ResourcePayload {
     const value = this.form.getRawValue();
-    const capacity = value.capacity.trim() === '' ? null : Number(value.capacity);
+    const capacityValue = String(value.capacity).trim();
+    const capacity = capacityValue === '' ? null : Number(capacityValue);
 
     return {
       resource_type_id: Number(value.resource_type_id),

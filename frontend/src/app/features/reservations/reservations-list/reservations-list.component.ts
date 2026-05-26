@@ -55,7 +55,7 @@ type CalendarScope = 'week' | 'day';
       </section>
 
       <app-card>
-        <form class="grid gap-3 lg:grid-cols-[1fr_13rem_13rem_11rem_11rem_8rem_auto]" (ngSubmit)="applyFilters()">
+        <form class="grid gap-3 lg:grid-cols-[1fr_13rem_13rem_11rem_11rem_8rem_auto]" (submit)="applyFilters($event)">
           <label class="block">
             <span class="mb-1.5 block text-sm font-semibold text-slate-700">Search</span>
             <span class="relative block">
@@ -313,7 +313,9 @@ export class ReservationsListComponent {
     });
   }
 
-  applyFilters(): void {
+  applyFilters(event?: Event): void {
+    event?.preventDefault();
+
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
