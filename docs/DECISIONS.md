@@ -77,7 +77,7 @@ A disponibilidade de um recurso é o ponto crítico do domínio: duas reservas b
 Aplicar a checagem de disponibilidade no `ReservationService::create()`, dentro de uma transação. O serviço bloqueia a linha do recurso com `lockForUpdate`, valida duração máxima do `ResourceType`, consulta reservas em `pending`, `approved` e `checked_out`, consulta `resource_blackouts` e só então cria a reserva já em `pending` ou `approved` quando o tipo não exige aprovação. Conflitos retornam `409` com `code: reservation.conflict`.
 
 ### Consequências
-O backend permanece fonte de verdade para disponibilidade e reduz corrida entre criações concorrentes do mesmo recurso. A garantia depende de todas as operações que criam estados bloqueantes passarem pelo serviço transacional. O teste de concorrência usa MySQL real e prova que duas criações simultâneas para o mesmo slot resultam em uma única reserva persistida.
+O backend permanece fonte de verdade para disponibilidade e reduz corrida entre criações concorrentes do mesmo recurso. A garantia depende de todas as operações que criam estados bloqueantes passarem pelo serviço transacional. Esse teste é gated por RUN_MYSQL_CONCURRENCY_TESTS (ver ADR-19).
 
 ## ADR-08 — Semântica de sobreposição com intervalo meio-aberto
 
@@ -199,3 +199,22 @@ Criar `docker-compose.prod.yml` com Angular build multi-stage servido por Nginx,
 
 ### Consequências
 O perfil de produção fica mais próximo de um deploy real e evita depender de `ng serve` ou `php artisan serve`. A composição ainda é simples o suficiente para portfólio e demonstra separação de responsabilidades, cache/opcache e injeção externa de segredos.
+
+## ADR-19 — Teste de concorrência gated por variável de ambiente
+
+### Contexto
+ReservationConcurrencyTest prova exclusividade sob corrida real usando pcntl_fork
+(dois processos) contra MySQL real com lockForUpdate. Esse teste não roda em
+qualquer runner de CI (exige pcntl e um MySQL real, não SQLite em memória), então
+fica skipped por padrão. Isso faz a suite exibir "1 skipped", o que pode ser lido
+erroneamente como ausência de prova de concorrência.
+
+### Decisão
+Manter o teste atrás da env var RUN_MYSQL_CONCURRENCY_TESTS=1. Documentar o comando
+de execução no README. Rodar:
+docker compose exec -e RUN_MYSQL_CONCURRENCY_TESTS=1 backend ./vendor/bin/pest tests/Feature/ReservationConcurrencyTest.php
+
+### Consequências
+A suite padrão permanece portável e rápida; a prova de concorrência (1 passed,
+4 assertions: exatamente 1 reserva persiste, perdedor recebe ReservationConflictException)
+fica disponível sob demanda e documentada, não escondida.
