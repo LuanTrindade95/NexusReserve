@@ -177,3 +177,25 @@ Manter a emissão do evento no ponto em que o status log é criado e executar `Q
 
 ### Consequências
 Qualquer transição por state machine aciona imediatamente a escolha de destinatários sem duplicar dispatch de evento. A entrega pesada continua fora do request via fila de notificações, e os testes conseguem observar o envio sem depender de um worker externo para processar o listener.
+
+## ADR-17 — Hardening HTTP e rate limiting por superfície sensível
+
+### Contexto
+O projeto já possuía autenticação, RBAC e erro JSON padronizado, mas a fase de portfólio exige demonstrar postura operacional mínima: headers de segurança, limites de abuso em rotas sensíveis e proteção explícita do handshake realtime.
+
+### Decisão
+Adicionar middleware global de headers (`nosniff`, `DENY`, referrer policy, permissions policy e HSTS quando HTTPS estiver ativo). Definir rate limiters para login, rotas mutáveis e `/broadcasting/auth`, aplicando limites por IP ou usuário autenticado.
+
+### Consequências
+A API reduz superfície para clickjacking, sniffing e abuso básico sem introduzir infraestrutura externa. Os limites são conservadores para o MVP e podem evoluir para políticas por plano, tenant ou gateway quando o produto exigir.
+
+## ADR-18 — Build Docker de produção separado por processo
+
+### Contexto
+O Docker de desenvolvimento usa servidores convenientes para feedback rápido. Para apresentação sênior, o projeto precisa mostrar um caminho operacional mais próximo de produção, com assets estáticos compilados, PHP-FPM otimizado e processos longos separados.
+
+### Decisão
+Criar `docker-compose.prod.yml` com Angular build multi-stage servido por Nginx, Laravel em PHP-FPM, Nginx separado para API, Horizon como worker, Reverb como servidor websocket, MySQL e Redis persistidos em volumes nomeados. Segredos de produção são exigidos por variável de ambiente e documentados em `.env.production.example`.
+
+### Consequências
+O perfil de produção fica mais próximo de um deploy real e evita depender de `ng serve` ou `php artisan serve`. A composição ainda é simples o suficiente para portfólio e demonstra separação de responsabilidades, cache/opcache e injeção externa de segredos.
