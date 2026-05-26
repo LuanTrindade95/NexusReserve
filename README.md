@@ -134,6 +134,17 @@ cd backend
 composer audit
 ```
 
+The `1 skipped` in the backend suite is intentional: it is the MySQL concurrency
+proof (two forked processes competing for the same slot under `lockForUpdate`),
+gated behind an env var because it needs a real MySQL and `pcntl`. Run it with:
+
+```bash
+docker compose exec -e RUN_MYSQL_CONCURRENCY_TESTS=1 backend \
+  ./vendor/bin/pest tests/Feature/ReservationConcurrencyTest.php
+```
+See ADR-19 for rationale.
+
+
 Frontend:
 
 ```bash
@@ -145,6 +156,11 @@ npm run build
 npm run e2e
 npm audit
 ```
+
+`npm audit` reports high/moderate **transitive** advisories from the build
+toolchain (Lighthouse → puppeteer-core → proxy-agent chain). No non-breaking
+fix is available and none affects the production runtime (build/dev tooling only).
+Re-evaluated on each Angular upgrade.
 
 ## Architecture Decisions
 
@@ -158,6 +174,8 @@ The full decision log lives in [docs/DECISIONS.md](docs/DECISIONS.md). Highlight
 - Realtime uses Reverb private/presence channels with authorization, not public broadcasts.
 - Notifications are persisted in the database and broadcast in realtime.
 - Production Docker separates Angular static serving, PHP-FPM, queue workers and Reverb.
+- Language convention: this README (public showcase) is in English for international
+- reach; internal documentation under `docs/` is in Portuguese. Deliberate choice.
 
 ## Portfolio Signal
 
