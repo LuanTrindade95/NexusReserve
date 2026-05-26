@@ -4,6 +4,11 @@ import { permissionGuard } from '@app/core/auth/permission.guard';
 
 export const routes: Routes = [
   {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () => import('@app/features/landing/landing.component').then((m) => m.LandingComponent),
+  },
+  {
     path: 'login',
     loadComponent: () => import('@app/features/auth/login/login.component').then((m) => m.LoginComponent),
   },
@@ -12,11 +17,6 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('@app/layout/app-shell/app-shell.component').then((m) => m.AppShellComponent),
     children: [
-      {
-        path: '',
-        pathMatch: 'full',
-        redirectTo: 'dashboard',
-      },
       {
         path: 'dashboard',
         loadComponent: () => import('@app/features/dashboard/dashboard.component').then((m) => m.DashboardComponent),

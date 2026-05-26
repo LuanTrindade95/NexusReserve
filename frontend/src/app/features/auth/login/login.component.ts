@@ -121,7 +121,7 @@ export class LoginComponent {
     this.auth.login(this.form.getRawValue()).pipe(
       finalize(() => this.loading.set(false)),
     ).subscribe({
-      next: () => void this.router.navigate(['/']),
+      next: () => void this.router.navigate(['/dashboard']),
       error: () => this.errorMessage.set('Invalid email or password.'),
     });
   }
