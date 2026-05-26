@@ -3,8 +3,8 @@ FROM php:8.3-cli
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git unzip libzip-dev $PHPIZE_DEPS \
     && docker-php-ext-install pdo_mysql pcntl sockets zip \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && pecl install redis pcov \
+    && docker-php-ext-enable redis pcov \
     && apt-get purge -y --auto-remove $PHPIZE_DEPS \
     && rm -rf /var/lib/apt/lists/*
 

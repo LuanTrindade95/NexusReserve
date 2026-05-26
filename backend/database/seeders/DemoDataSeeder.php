@@ -50,13 +50,19 @@ class DemoDataSeeder extends Seeder
             return [$role => $user];
         });
 
-        $requesters = User::factory()
-            ->count(8)
-            ->sequence(fn ($sequence) => [
-                'department_id' => $departments[$sequence->index % $departments->count()]->id,
-            ])
-            ->create()
-            ->each(fn (User $user) => $user->assignRole('requester'));
+        $requesters = collect(range(1, 8))->map(function (int $index) use ($departments) {
+            $user = User::create([
+                'name' => 'Requester '.$index,
+                'email' => 'requester'.$index.'@demo',
+                'department_id' => $departments[($index - 1) % $departments->count()]->id,
+                'password' => Hash::make('password'),
+                'email_verified_at' => now(),
+            ]);
+
+            $user->assignRole('requester');
+
+            return $user;
+        });
 
         $resourceTypes = collect([
             ['Executive Rooms', 'executive-rooms', 'building-2', true, 240, '#06B6D4'],
