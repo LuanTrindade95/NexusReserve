@@ -2,6 +2,7 @@
 
 use App\Exceptions\ReservationConflictException;
 use App\Http\Middleware\ForceJsonResponse;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -27,9 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withBroadcasting(__DIR__.'/../routes/channels.php', [
-        'middleware' => ['api', 'auth:sanctum'],
+        'middleware' => ['api', 'auth:sanctum', 'throttle:broadcasting'],
     ])
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->append(SecurityHeaders::class);
+
         $middleware->api(prepend: [
             ForceJsonResponse::class,
         ]);
