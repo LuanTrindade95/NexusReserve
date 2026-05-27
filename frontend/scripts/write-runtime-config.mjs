@@ -3,8 +3,10 @@ import { mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const outputPath = resolve('public/runtime-config.js');
-const isNetlifyBuild = process.env.NETLIFY === 'true';
-const apiBaseUrl = process.env.NEXUS_API_BASE_URL ?? (isNetlifyBuild ? null : 'http://localhost:8000/api/v1');
+const isHostedBuild = process.env.NETLIFY === 'true' || ['production', 'deploy-preview', 'branch-deploy'].includes(
+  process.env.CONTEXT ?? '',
+);
+const apiBaseUrl = process.env.NEXUS_API_BASE_URL ?? (isHostedBuild ? null : 'http://localhost:8000/api/v1');
 
 if (!apiBaseUrl) {
   throw new Error(
