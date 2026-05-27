@@ -1,0 +1,17 @@
+.git/
+.github/
+.netlify/
+
+backend/vendor/
+backend/storage/logs/*.log
+
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/lighthouse-*.json
+
+node_modules/
+coverage/
+dist/
