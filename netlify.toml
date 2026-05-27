@@ -1,7 +1,7 @@
 [build]
   base = "frontend"
   command = "npm run build:netlify"
-  publish = "frontend/dist/frontend/browser"
+  publish = "dist/frontend/browser"
 
 [build.environment]
   NODE_VERSION = "22"
@@ -17,6 +17,11 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/runtime-config.js"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
 
 [[headers]]
   for = "/*.js"
