@@ -8,5 +8,5 @@ declare global {
 
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
   providedIn: 'root',
-  factory: () => globalThis.window?.nexusReserveApiBaseUrl ?? 'http://localhost:8000/api/v1',
+  factory: () => globalThis.window?.nexusReserveApiBaseUrl ?? '/api/v1',
 });

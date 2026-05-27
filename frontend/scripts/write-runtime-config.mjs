@@ -3,9 +3,17 @@ import { mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const outputPath = resolve('public/runtime-config.js');
+const isNetlifyBuild = process.env.NETLIFY === 'true';
+const apiBaseUrl = process.env.NEXUS_API_BASE_URL ?? (isNetlifyBuild ? null : 'http://localhost:8000/api/v1');
+
+if (!apiBaseUrl) {
+  throw new Error(
+    'Missing NEXUS_API_BASE_URL. Netlify builds must point the SPA to a public NexusReserve API URL.',
+  );
+}
 
 const config = {
-  apiBaseUrl: process.env.NEXUS_API_BASE_URL ?? 'http://localhost:8000/api/v1',
+  apiBaseUrl,
   realtime: {
     appKey: process.env.NEXUS_REVERB_APP_KEY ?? 'nexus-reserve-local-key',
     host: process.env.NEXUS_REVERB_HOST ?? 'localhost',
