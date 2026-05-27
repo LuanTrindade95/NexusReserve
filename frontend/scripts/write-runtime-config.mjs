@@ -17,8 +17,8 @@ if (!apiBaseUrl) {
 const config = {
   apiBaseUrl,
   realtime: {
-    appKey: process.env.NEXUS_REVERB_APP_KEY ?? 'nexus-reserve-local-key',
-    host: process.env.NEXUS_REVERB_HOST ?? 'localhost',
+    appKey: process.env.NEXUS_REVERB_APP_KEY ?? (isHostedBuild ? '' : 'nexus-reserve-local-key'),
+    host: process.env.NEXUS_REVERB_HOST ?? (isHostedBuild ? '' : 'localhost'),
     port: Number(process.env.NEXUS_REVERB_PORT ?? 8080),
     scheme: process.env.NEXUS_REVERB_SCHEME ?? 'http',
   },

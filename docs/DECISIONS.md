@@ -218,3 +218,14 @@ docker compose exec -e RUN_MYSQL_CONCURRENCY_TESTS=1 backend ./vendor/bin/pest t
 A suite padrão permanece portável e rápida; a prova de concorrência (1 passed,
 4 assertions: exatamente 1 reserva persiste, perdedor recebe ReservationConflictException)
 fica disponível sob demanda e documentada, não escondida.
+
+## ADR-20 - Deploy gratuito Render + Aiven com realtime degradado
+
+### Contexto
+O frontend publico em Netlify nao pode chamar `localhost:8000`; a API Laravel precisa ter uma URL HTTPS publica. A restricao de custo e plano gratuito impede manter a topologia completa de producao com PHP-FPM + Nginx separados, Horizon dedicado, Redis persistente e Reverb publico.
+
+### Decisao
+Criar um perfil gratuito de publicacao com Render Free Web Service para a API Laravel e Aiven Free MySQL para o banco. O container Render usa um Dockerfile dedicado de web service unico, expoe `/up` como health check, aceita CA da Aiven por `AIVEN_CA_PEM` e roda migrations de forma controlada por env. Para preservar funcionamento sem workers pagos, `QUEUE_CONNECTION=sync`; para evitar WebSocket quebrado sem Reverb publico, `BROADCAST_CONNECTION=log` e o runtime config do Netlify permite `NEXUS_REVERB_APP_KEY` vazio.
+
+### Consequencias
+A demo publica passa a ter login e API reais sem apontar para loopback. O realtime fica conscientemente degradado no ambiente gratuito, mas a arquitetura completa permanece documentada e disponivel no Docker production-like. Quando houver budget, o caminho natural e adicionar worker, Valkey/Redis e Reverb publico ou migrar para o perfil Docker completo em uma VPS/PaaS pago.

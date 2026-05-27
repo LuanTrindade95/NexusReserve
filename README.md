@@ -123,6 +123,22 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 The production profile builds Angular once and serves it through Nginx, runs Laravel behind PHP-FPM, runs a separate Nginx API edge, and keeps Horizon/Reverb as isolated processes. Required production variables are documented in [backend/.env.production.example](backend/.env.production.example) and [docker/prod/README.md](docker/prod/README.md).
 
+## Free Hosted Demo
+
+The free public demo path uses Netlify for the Angular SPA, Render Free Web Service for the Laravel API, and Aiven Free MySQL for the database. This keeps the portfolio reachable without publishing a frontend that points at `localhost`.
+
+```text
+Netlify -> Render Laravel API -> Aiven MySQL
+```
+
+The free profile intentionally degrades queues and realtime:
+
+- `QUEUE_CONNECTION=sync` so notifications execute without a paid worker.
+- `BROADCAST_CONNECTION=log` while Reverb is not publicly hosted.
+- `NEXUS_REVERB_APP_KEY=` on Netlify disables the Echo client instead of opening a broken WebSocket.
+
+See [docs/deploy/render-aiven.md](docs/deploy/render-aiven.md) for the deployment checklist and required environment variables.
+
 ## Quality Gates
 
 Backend:
