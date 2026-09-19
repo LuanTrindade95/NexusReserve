@@ -12,9 +12,10 @@ import { Reservation, ReservationStatus } from '@app/features/reservations/reser
 import { ButtonComponent } from '@app/shared/ui/button/button.component';
 import { CardComponent } from '@app/shared/ui/card/card.component';
 import { EmptyStateComponent } from '@app/shared/ui/empty-state/empty-state.component';
+import { SearchFieldComponent } from '@app/shared/ui/search-field/search-field.component';
 import { SelectComponent, SelectOption } from '@app/shared/ui/select/select.component';
 import { StatusPillComponent, StatusTone } from '@app/shared/ui/status-pill/status-pill.component';
-import { CalendarDays, List, Plus, Search } from 'lucide-angular';
+import { CalendarDays, List, Plus } from 'lucide-angular';
 import { LucideAngularModule } from 'lucide-angular';
 
 type ViewMode = 'list' | 'calendar';
@@ -22,7 +23,7 @@ type CalendarScope = 'week' | 'day';
 
 @Component({
   selector: 'app-reservations-list',
-  imports: [ButtonComponent, CardComponent, DatePipe, EmptyStateComponent, LucideAngularModule, ReactiveFormsModule, RouterLink, SelectComponent, StatusPillComponent],
+  imports: [ButtonComponent, CardComponent, DatePipe, EmptyStateComponent, LucideAngularModule, ReactiveFormsModule, RouterLink, SearchFieldComponent, SelectComponent, StatusPillComponent],
   template: `
     <div class="grid gap-5">
       <section class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -55,31 +56,19 @@ type CalendarScope = 'week' | 'day';
       </section>
 
       <app-card>
-        <form class="grid gap-3 lg:grid-cols-[1fr_13rem_13rem_11rem_11rem_8rem_auto]" (submit)="applyFilters($event)">
-          <label class="block">
-            <span class="mb-1.5 block text-sm font-semibold text-slate-700">Search</span>
-            <span class="relative block">
-              <lucide-angular class="absolute left-3 top-3 text-slate-400" [img]="searchIcon" [size]="16" />
-              <input
-                #searchInput
-                class="h-11 w-full rounded-lg border border-border bg-white pl-9 pr-3 text-sm text-midnight-blue shadow-sm focus:border-enterprise-cyan focus:ring-4 focus:ring-cyan-100"
-                [value]="search()"
-                placeholder="Purpose"
-                (input)="search.set(searchInput.value)"
-              />
-            </span>
-          </label>
-          <app-select label="Resource" [options]="resourceOptions()" [formControl]="resourceControl" />
-          <app-select label="Status" [options]="statusOptions" [formControl]="statusControl" />
-          <label class="block">
+        <form class="grid gap-3 lg:flex lg:flex-wrap lg:items-end" (submit)="applyFilters($event)">
+          <app-search-field class="min-w-64 flex-1" placeholder="Purpose" [value]="search()" (valueChange)="search.set($event)" />
+          <app-select class="lg:w-52" label="Resource" [options]="resourceOptions()" [formControl]="resourceControl" />
+          <app-select class="lg:w-52" label="Status" [options]="statusOptions" [formControl]="statusControl" />
+          <label class="block lg:w-44">
             <span class="mb-1.5 block text-sm font-semibold text-slate-700">From</span>
             <input class="form-field" type="date" [formControl]="fromControl" />
           </label>
-          <label class="block">
+          <label class="block lg:w-44">
             <span class="mb-1.5 block text-sm font-semibold text-slate-700">Until</span>
             <input class="form-field" type="date" [formControl]="untilControl" />
           </label>
-          <label class="flex items-end gap-2 pb-2 text-sm font-semibold text-slate-700">
+          <label class="flex items-end gap-2 pb-2 text-sm font-semibold text-slate-700 lg:w-32">
             <input class="mb-1 h-4 w-4 rounded border-border text-enterprise-cyan" type="checkbox" [formControl]="mineControl" />
             Mine
           </label>
@@ -215,7 +204,6 @@ export class ReservationsListComponent {
   readonly calendarIcon = CalendarDays;
   readonly listIcon = List;
   readonly plusIcon = Plus;
-  readonly searchIcon = Search;
   readonly reservations = signal<readonly Reservation[]>([]);
   readonly resources = signal<readonly Resource[]>([]);
   readonly blackouts = signal<readonly ResourceBlackout[]>([]);
