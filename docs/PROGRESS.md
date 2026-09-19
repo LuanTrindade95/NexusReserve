@@ -17,3 +17,8 @@
 | Fase 5 — Realtime + Notificações | ✓ auditada | 58b7f36+1cd734e+91ea8cc — Pest RealtimeNotification 4/4; não-regressão 13/13; CORS /broadcasting/auth preflight 204; WS Reverb conectado (101, X-Powered-By: Laravel Reverb); CORS error eliminado do console; notificação ao vivo confirmada em teste manual. ADR-13/14 + correções |
 | Fase 6 — Polish & Vitrine | ✓ auditada | d5424a2 + CI #13 Success (Backend 22s/Frontend 56s no main); npm ci limpo (1594 pkgs); lint/Jest 9/9/build verdes; Pest 32p+1skip 84.5% cov; Playwright 3/3; composer audit limpo; Docker prod 200/200; Lighthouse landing 98/92/100, app 100/100/95; README com 3 screenshots reais (confirmados em disco) |
 | Projeto v1 | ✓ completo | NexusReserve v1 completo como peça de portfólio sênior; README estratégico, screenshots reais, ADRs finais e deploy Docker documentados |
+| Correção pós-v1 — layout do filtro de busca | ✓ auditada | 3d9dc50 — busca em /resources e /reservations não encolhe (antes 50px; mín. medido 258px) nem estoura o card; lupa centralizada (Δ 0px) em 375/768/1024/1280/1440 × sidebar expandida/recolhida; filtros/URL/Apply/Clear inalterados; lint/build verdes; Jest 7/7 suites, 9/9 testes |
+
+## Problemas conhecidos
+
+- `npm run test` (Jest) não encontra testes quando o checkout está dentro de uma pasta cujo nome começa com ponto (ex.: worktrees em `.claude/worktrees/`): o `testMatch` resolve 0 arquivos. Em checkout comum e na CI roda normalmente. Contorno local: rodar o Jest com um config que troque `testMatch` por `testRegex` equivalente, sem alterar os testes.
