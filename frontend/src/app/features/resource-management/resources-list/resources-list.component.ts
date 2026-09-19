@@ -12,9 +12,10 @@ import { ButtonComponent } from '@app/shared/ui/button/button.component';
 import { CardComponent } from '@app/shared/ui/card/card.component';
 import { EmptyStateComponent } from '@app/shared/ui/empty-state/empty-state.component';
 import { ModalComponent } from '@app/shared/ui/modal/modal.component';
+import { SearchFieldComponent } from '@app/shared/ui/search-field/search-field.component';
 import { SelectComponent, SelectOption } from '@app/shared/ui/select/select.component';
 import { StatusPillComponent, StatusTone } from '@app/shared/ui/status-pill/status-pill.component';
-import { Plus, RotateCcw, Search, Trash2 } from 'lucide-angular';
+import { Plus, RotateCcw, Trash2 } from 'lucide-angular';
 import { LucideAngularModule } from 'lucide-angular';
 
 interface ResourceForm {
@@ -38,6 +39,7 @@ interface ResourceForm {
     ModalComponent,
     ReactiveFormsModule,
     RouterLink,
+    SearchFieldComponent,
     SelectComponent,
     StatusPillComponent,
   ],
@@ -57,22 +59,10 @@ interface ResourceForm {
       </section>
 
       <app-card>
-        <form class="grid gap-3 lg:grid-cols-[1fr_14rem_12rem_auto]" (submit)="applyFilters($event)">
-          <label class="block">
-            <span class="mb-1.5 block text-sm font-semibold text-slate-700">Search</span>
-            <span class="relative block">
-              <lucide-angular class="absolute left-3 top-3 text-slate-400" [img]="searchIcon" [size]="16" />
-              <input
-                #searchInput
-                class="h-11 w-full rounded-lg border border-border bg-white pl-9 pr-3 text-sm text-midnight-blue shadow-sm focus:border-enterprise-cyan focus:ring-4 focus:ring-cyan-100"
-                [value]="search()"
-                placeholder="Name or code"
-                (input)="search.set(searchInput.value)"
-              />
-            </span>
-          </label>
-          <app-select label="Type" [options]="typeOptions()" [formControl]="typeControl" />
-          <app-select label="Status" [options]="statusOptions" [formControl]="statusControl" />
+        <form class="grid gap-3 lg:flex lg:flex-wrap lg:items-end" (submit)="applyFilters($event)">
+          <app-search-field class="min-w-64 flex-1" placeholder="Name or code" [value]="search()" (valueChange)="search.set($event)" />
+          <app-select class="lg:w-56" label="Type" [options]="typeOptions()" [formControl]="typeControl" />
+          <app-select class="lg:w-48" label="Status" [options]="statusOptions" [formControl]="statusControl" />
           <div class="flex items-end gap-2">
             <app-button type="submit">Apply</app-button>
             <app-button variant="secondary" type="button" (click)="clearFilters()">Clear</app-button>
@@ -210,7 +200,6 @@ export class ResourcesListComponent {
 
   readonly plusIcon = Plus;
   readonly restoreIcon = RotateCcw;
-  readonly searchIcon = Search;
   readonly trashIcon = Trash2;
   readonly resources = signal<readonly Resource[]>([]);
   readonly resourceTypes = signal<readonly ResourceType[]>([]);
